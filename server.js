@@ -5,6 +5,7 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./src/config/db");
 const http = require("http");
+const paymentRoutes = require("./src/routes/paymentRoutes");
 
 dotenv.config();
 connectDB();
@@ -36,6 +37,9 @@ const corsOptions = {
 
 // ✅ Aplica CORS em todas as rotas (depois de definir corsOptions)
 app.use(cors(corsOptions));
+
+// Rota pagamente mercado pago
+app.use("/api/payments", paymentRoutes);
 
 // Importa rotas
 const authRoutes = require("./src/routes/authRoutes");
