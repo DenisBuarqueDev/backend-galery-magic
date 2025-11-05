@@ -56,7 +56,7 @@ router.get(
 
 /**
  * ✅ Rota: Deletar uma história específica
- * Método: DELETE /api/histories/:id
+ * Método: DELETE /api/stories/:id
  */
 router.delete(
   "/:id",

@@ -42,7 +42,7 @@ const register = async (req, res) => {
     res.status(201).json({
       message: "Cadastro do usuário realizado com sucesso!",
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.firstName,
         email: user.email,
       },
