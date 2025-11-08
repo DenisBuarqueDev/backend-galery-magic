@@ -66,9 +66,21 @@ const ProductSchema = new mongoose.Schema(
       default: null,
     },
 
+    syllable: {
+      type: Boolean,
+      default: true,
+    },
+
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: [true, "A categoria é obrigatória."],
+      index: true,
     },
   },
   {

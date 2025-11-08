@@ -48,6 +48,7 @@ const productRoutes = require("./src/routes/productRoutes");
 const storiesRoutes = require("./src/routes/storiesRoutes");
 const letterRoutes = require("./src/routes/letterRoutes");
 const coloringRoutes = require("./src/routes/coloringRoutes");
+const categoryRoutes = require("./src/routes/categoryRoutes");
 
 // Usa rotas
 app.use("/api/auth", authRoutes);
@@ -56,6 +57,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/stories", storiesRoutes);
 app.use("/api/letters", letterRoutes);
 app.use("/api/coloring", coloringRoutes);
+app.use("/api/categories", categoryRoutes);
 
 // rota protegida de teste:
 app.get("/api/me", (req, res) => {

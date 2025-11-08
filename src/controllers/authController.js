@@ -19,7 +19,7 @@ const register = async (req, res) => {
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "Usuário já existe!" });
+      return res.status(400).json({ message: "E-mail já cadastrado!" });
     }
 
     const user = await User.create({
@@ -40,7 +40,7 @@ const register = async (req, res) => {
     });
 
     res.status(201).json({
-      message: "Cadastro do usuário realizado com sucesso!",
+      message: "Conta criada com sucesso!",
       user: {
         _id: user._id,
         name: user.firstName,
@@ -49,7 +49,7 @@ const register = async (req, res) => {
       token: token,
     });
   } catch (error) {
-    res.status(500).json({ error: "Erro ao cadastrar o usuário!" });
+    res.status(500).json({ message: "Erro ao criar conta!" });
   }
 };
 
