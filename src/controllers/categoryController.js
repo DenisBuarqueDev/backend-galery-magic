@@ -25,12 +25,25 @@ const createCategory = async (req, res) => {
  * @desc Listar todas as categorias
  * @route GET /api/categories
  */
-const getAllCategories = async (req, res) => {
+const getCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ createdAt: -1 });
     res.json(categories);
   } catch (error) {
     res.status(500).json({ message: "Erro ao buscar categorias." });
+  }
+};
+
+const getAllCategories = async (req, res) => {
+  try {
+    const categories = await Category.find().sort({ name: 1 });
+    res.status(200).json({
+      message: "Categorias listadas com sucesso!",
+      data: categories,
+    });
+  } catch (err) {
+    console.error("❌ Erro ao listar categorias:", err);
+    res.status(500).json({ error: "Erro ao listar categorias." });
   }
 };
 
