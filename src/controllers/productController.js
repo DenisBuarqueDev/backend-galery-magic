@@ -21,15 +21,17 @@ const createProduct = async (req, res) => {
       });
     }
 
-    const { title, english, sound } = req.body;
+    const { title, english, sound, categoryId, syllable, isActive } = req.body;
+
     if (!title?.trim()) {
       return res.status(400).json({ message: "O título é obrigatório!" });
     }
-
     if (!english?.trim()) {
-      return res.status(400).json({ message: "O título em inglês é obrigatório!" });
+      return res
+        .status(400)
+        .json({ message: "O título em inglês é obrigatório!" });
     }
-    
+
     let imageUrl = null;
     let imagePublicId = null;
 
@@ -43,7 +45,7 @@ const createProduct = async (req, res) => {
       imageUrl = uploadResult.secure_url;
       imagePublicId = uploadResult.public_id;
 
-      fs.unlink(req.file.path, () => {}); // Remove arquivo temporário sem travar o fluxo
+      fs.unlink(req.file.path, () => {}); // Remove arquivo temporário
     }
 
     const product = await Product.create({
@@ -52,6 +54,9 @@ const createProduct = async (req, res) => {
       image: imageUrl,
       imagePublicId,
       sound: sound?.trim() || "",
+      categoryId: categoryId || null,
+      syllable: syllable?.trim() || "",
+      isActive: isActive !== undefined ? Boolean(isActive) : true, // padrão true
     });
 
     return res.status(201).json({
@@ -69,7 +74,10 @@ const createProduct = async (req, res) => {
  */
 const getProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 }); // ordem recente primeiro
+    const products = await Product.find()
+      .populate("categoryId", "name") // popula nome da categoria
+      .sort({ createdAt: -1 });
+
     return res.status(200).json({
       message: "Produtos listados com sucesso!",
       data: products,
@@ -81,11 +89,52 @@ const getProducts = async (req, res) => {
 };
 
 /**
+ * Lista produtos (com filtro opcional por categoria)
+ */
+const getProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId, category } = req.query;
+
+    // Cria o filtro dinâmico
+    const filter = {};
+    if (categoryId) {
+      filter.categoryId = categoryId;
+    } else if (category) {
+      // Se vier o nome da categoria, faz lookup por nome
+      const Category = require("../models/Category");
+      const foundCategory = await Category.findOne({ name: category });
+      if (foundCategory) {
+        filter.categoryId = foundCategory._id;
+      } else {
+        return res.status(404).json({ message: "Categoria não encontrada." });
+      }
+    }
+
+    const products = await Product.find(filter)
+      .populate("categoryId", "name")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      message: "Produtos listados com sucesso!",
+      data: products,
+    });
+  } catch (err) {
+    console.error("❌ Erro ao listar produtos:", err);
+    return res.status(500).json({ error: "Erro interno ao listar produtos." });
+  }
+};
+
+
+/**
  * Retorna um produto pelo ID
  */
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).populate(
+      "categoryId",
+      "name"
+    );
+
     if (!product) {
       return res.status(404).json({ message: "Produto não encontrado." });
     }
@@ -105,13 +154,15 @@ const getProductById = async (req, res) => {
  */
 const updateProduct = async (req, res) => {
   try {
-    const { title, english, sound } = req.body;
+    const { title, english, sound, categoryId, syllable, isActive } = req.body;
+
     if (!title?.trim()) {
       return res.status(400).json({ message: "O título é obrigatório!" });
     }
-
     if (!english?.trim()) {
-      return res.status(400).json({ message: "O título em inglês é obrigatório!" });
+      return res
+        .status(400)
+        .json({ message: "O título em inglês é obrigatório!" });
     }
 
     const product = await Product.findById(req.params.id);
@@ -138,6 +189,9 @@ const updateProduct = async (req, res) => {
     product.title = title.trim();
     product.english = english.trim();
     product.sound = sound?.trim() || "";
+    product.categoryId = categoryId || null;
+    product.syllable = syllable?.trim() || "";
+    if (isActive !== undefined) product.isActive = Boolean(isActive);
 
     const updated = await product.save();
 
@@ -179,17 +233,6 @@ const deleteProduct = async (req, res) => {
 /**
  * Gera uma história infantil usando IA (Google Gemini)
  */
-
-const listModels = async (req, res) => {
-  try {
-    const models = await genAI.listModels();
-    return res.json(models);
-  } catch (err) {
-    console.error("Erro ao listar modelos:", err);
-    return res.status(500).json({ error: "Não foi possível listar modelos" });
-  }
-};
-
 let lastCall = 0;
 
 const geminiCreateStory = async (req, res) => {
@@ -211,8 +254,8 @@ const geminiCreateStory = async (req, res) => {
       A história deve ser envolvente, criativa e fácil de entender, adequada para crianças de 4 a 10 anos.
       Mantenha o tom leve, mágico e positivo.
     `;
+
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    //const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const text = result?.response?.text()?.trim();
 
@@ -235,7 +278,8 @@ const geminiCreateStory = async (req, res) => {
 
 module.exports = {
   createProduct,
-  getProducts,
+  getProducts, 
+  getProductsByCategory,
   getProductById,
   updateProduct,
   deleteProduct,

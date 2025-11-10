@@ -2,7 +2,8 @@ const express = require("express");
 const { body } = require("express-validator");
 const {
   createProduct,
-  getProducts,
+  getProducts, 
+  getProductsByCategory,
   getProductById,
   updateProduct,
   deleteProduct,
@@ -50,8 +51,10 @@ router.post("/gemini/story", geminiCreateStory);
  */
 router
   .route("/")
+  .get(getProductsByCategory)
   .get(getProducts)
   .post(upload.single("image"), productValidation, createProduct);
+
 
 router
   .route("/:id")
