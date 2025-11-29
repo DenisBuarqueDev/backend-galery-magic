@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const mongoose = require("mongoose");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { validationResult } = require("express-validator");
 const fs = require("fs");
@@ -89,41 +90,48 @@ const getProducts = async (req, res) => {
 };
 
 /**
- * Lista produtos (com filtro opcional por categoria)
+ * @desc Lista produtos (com filtro opcional por categoria)
+ * @route GET /api/products/filter
  */
 const getProductsByCategory = async (req, res) => {
-  try {
-    const { categoryId, category } = req.query;
+    try {
+        const { categoryId } = req.query; // Foco apenas no categoryId, já que o frontend usa ele
 
-    // Cria o filtro dinâmico
-    const filter = {};
-    if (categoryId) {
-      filter.categoryId = categoryId;
-    } else if (category) {
-      // Se vier o nome da categoria, faz lookup por nome
-      const Category = require("../models/Category");
-      const foundCategory = await Category.findOne({ name: category });
-      if (foundCategory) {
-        filter.categoryId = foundCategory._id;
-      } else {
-        return res.status(404).json({ message: "Categoria não encontrada." });
-      }
+        const filter = {};
+        
+        // 1. Validação de ID: Essencial para evitar o crash Mongoose/CastError (500)
+        if (categoryId) {
+            if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+                return res.status(400).json({ 
+                    message: `ID de Categoria inválido: ${categoryId}.`,
+                    data: []
+                });
+            }
+            filter.categoryId = categoryId;
+        }
+
+        // 2. Busca os produtos com o filtro (se houver, Mongoose busca pelo ID)
+        // O Mongoose.find() é robusto e funcionará mesmo se filter for {} (listando tudo, caso a rota seja chamada sem filtro)
+        const products = await Product.find(filter)
+            .populate("categoryId", "name icon") 
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            message: "Produtos listados com sucesso!",
+            data: products,
+        });
+
+    } catch (err) {
+        // 💡 Tratamento de erro robusto para CastError ou falhas de populacão
+        if (err.name === 'CastError') {
+             console.error("❌ CastError ao buscar produtos:", err);
+             return res.status(400).json({ error: "ID de recurso inválido (CastError)." });
+        }
+        
+        console.error("❌ Erro ao listar produtos:", err);
+        return res.status(500).json({ error: "Erro interno ao buscar produto." });
     }
-
-    const products = await Product.find(filter)
-      .populate("categoryId", "name")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({
-      message: "Produtos listados com sucesso!",
-      data: products,
-    });
-  } catch (err) {
-    console.error("❌ Erro ao listar produtos:", err);
-    return res.status(500).json({ error: "Erro interno ao listar produtos." });
-  }
 };
-
 
 /**
  * Retorna um produto pelo ID
@@ -278,7 +286,7 @@ const geminiCreateStory = async (req, res) => {
 
 module.exports = {
   createProduct,
-  getProducts, 
+  getProducts,
   getProductsByCategory,
   getProductById,
   updateProduct,
