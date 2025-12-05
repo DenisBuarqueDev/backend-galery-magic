@@ -75,9 +75,12 @@ const createProduct = async (req, res) => {
  */
 const getProducts = async (req, res) => {
   try {
-    const products = await Product.find()
-      .populate("categoryId", "name") // popula nome da categoria
-      .sort({ createdAt: -1 });
+    const products = await Product.aggregate([
+      { $sample: { size: 50 } } // quantidade de itens retornados
+    ]);
+
+    // Re-popular categoria após aggregate
+    await Product.populate(products, { path: "categoryId", select: "name" });
 
     return res.status(200).json({
       message: "Produtos listados com sucesso!",

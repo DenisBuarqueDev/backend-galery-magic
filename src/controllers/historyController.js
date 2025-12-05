@@ -2,49 +2,6 @@ const Store = require("../models/Store");
 const User = require("../models/User"); // Modelo do usuário
 
 /**
- * 📘 Salvar uma nova história
- */
-/*const saveHistory = async (req, res) => {
-  try {
-    const { idUser } = req.params;
-    const { title, text } = req.body;
-
-    // Validação básica
-    if (!idUser || !title?.trim() || !text?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Campos obrigatórios ausentes: título, texto ou usuário.",
-      });
-    }
-
-    // 🔍 Verifica se o usuário existe
-    const userExists = await User.findById(idUser);
-    if (!userExists) {
-      return res.status(404).json({
-        success: false,
-        message: "Usuário não encontrado.",
-      });
-    }
-
-    // Cria e salva a nova história
-    const newHistory = await Store.create({ title, text, idUser });
-
-    return res.status(201).json({
-      success: true,
-      message: "História salva com sucesso!",
-      data: newHistory,
-    });
-  } catch (error) {
-    console.error("❌ Erro ao salvar história:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Erro interno ao salvar história.",
-      error: error.message,
-    });
-  }
-};*/
-
-/**
  * 📘 Salvar uma única história combinando várias histórias do localStorage
  */
 const saveHistory = async (req, res) => {
