@@ -7,6 +7,11 @@ const { v2: cloudinary } = require("cloudinary");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+import { GoogleGenAI } from '@google/genai';
+// Inicialize o cliente do Gemini.
+// Ele usará automaticamente a variável de ambiente GEMINI_API_KEY.
+const ai = new GoogleGenAI({});
+
 /**
  * Cria um novo produto (imagem e som hospedados no Cloudinary)
  */
@@ -76,7 +81,7 @@ const createProduct = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
     const products = await Product.aggregate([
-      { $sample: { size: 50 } } // quantidade de itens retornados
+      { $sample: { size: 300 } } // quantidade de itens retornados
     ]);
 
     // Re-popular categoria após aggregate
@@ -247,6 +252,54 @@ const deleteProduct = async (req, res) => {
 let lastCall = 0;
 
 const geminiCreateStory = async (req, res) => {
+    // 🚦 Rate Limiting: 3 segundos entre chamadas
+    if (Date.now() - lastCall < 3000) {
+        return res
+            .status(429)
+            .json({ message: "Espere 3 segundos antes de tentar novamente." });
+    }
+    lastCall = Date.now();
+
+    try {
+        const { word } = req.body;
+        if (!word?.trim()) {
+            return res.status(400).json({ message: "A palavra é obrigatória!" });
+        }
+
+        // 📝 Prompt otimizado para a palavra
+        const prompt = `
+            Crie uma pequena história com exatamente três frases inspirada na palavra "${word}".
+            A história deve ser envolvente, criativa e fácil de entender, adequada para crianças de 4 a 10 anos.
+            Mantenha o tom leve, mágico e positivo.
+        `;
+
+        // ⭐ MUDANÇA 1: Usando a sintaxe 'ai.models.generateContent'
+        // ⭐ MUDANÇA 2: Usando o modelo 'gemini-2.5-pro' para maior qualidade
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-pro", 
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        });
+
+        const text = response.text?.trim();
+
+        if (!text) {
+            throw new Error("Falha ao gerar história com Gemini. A resposta estava vazia.");
+        }
+
+        return res.status(200).json({
+            message: "História gerada com sucesso!",
+            story: text,
+        });
+    } catch (err) {
+        console.error("❌ Erro geminiCreateStory IA:", err);
+        return res.status(500).json({
+            error: "Erro ao gerar história com IA.",
+            details: err.message,
+        });
+    }
+};
+
+const geminiCreateStory_old = async (req, res) => {
   if (Date.now() - lastCall < 3000) {
     return res
       .status(429)
@@ -267,6 +320,7 @@ const geminiCreateStory = async (req, res) => {
     `;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
     const result = await model.generateContent(prompt);
     const text = result?.response?.text()?.trim();
 
