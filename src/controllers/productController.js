@@ -1,16 +1,14 @@
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 const { validationResult } = require("express-validator");
 const fs = require("fs");
 const { v2: cloudinary } = require("cloudinary");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-import { GoogleGenAI } from '@google/genai';
-// Inicialize o cliente do Gemini.
-// Ele usará automaticamente a variável de ambiente GEMINI_API_KEY.
-const ai = new GoogleGenAI({});
+// 🔥 Nova API do Google GenAI (APENAS ELA)
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
 /**
  * Cria um novo produto (imagem e som hospedados no Cloudinary)
@@ -41,7 +39,6 @@ const createProduct = async (req, res) => {
     let imageUrl = null;
     let imagePublicId = null;
 
-    // Upload da imagem, se enviada
     if (req.file) {
       const uploadResult = await cloudinary.uploader.upload(req.file.path, {
         folder: "products",
@@ -51,7 +48,7 @@ const createProduct = async (req, res) => {
       imageUrl = uploadResult.secure_url;
       imagePublicId = uploadResult.public_id;
 
-      fs.unlink(req.file.path, () => {}); // Remove arquivo temporário
+      fs.unlink(req.file.path, () => {});
     }
 
     const product = await Product.create({
@@ -62,7 +59,7 @@ const createProduct = async (req, res) => {
       sound: sound?.trim() || "",
       categoryId: categoryId || null,
       syllable: syllable?.trim() || "",
-      isActive: isActive !== undefined ? Boolean(isActive) : true, // padrão true
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
     });
 
     return res.status(201).json({
@@ -76,15 +73,12 @@ const createProduct = async (req, res) => {
 };
 
 /**
- * Lista todos os produtos
+ * Lista todos os produtos aleatórios (até 300)
  */
 const getProducts = async (req, res) => {
   try {
-    const products = await Product.aggregate([
-      { $sample: { size: 300 } } // quantidade de itens retornados
-    ]);
+    const products = await Product.aggregate([{ $sample: { size: 300 } }]);
 
-    // Re-popular categoria após aggregate
     await Product.populate(products, { path: "categoryId", select: "name" });
 
     return res.status(200).json({
@@ -98,47 +92,42 @@ const getProducts = async (req, res) => {
 };
 
 /**
- * @desc Lista produtos (com filtro opcional por categoria)
- * @route GET /api/products/filter
+ * Lista produtos filtrados por categoria
  */
 const getProductsByCategory = async (req, res) => {
-    try {
-        const { categoryId } = req.query; // Foco apenas no categoryId, já que o frontend usa ele
+  try {
+    const { categoryId } = req.query;
+    const filter = {};
 
-        const filter = {};
-        
-        // 1. Validação de ID: Essencial para evitar o crash Mongoose/CastError (500)
-        if (categoryId) {
-            if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-                return res.status(400).json({ 
-                    message: `ID de Categoria inválido: ${categoryId}.`,
-                    data: []
-                });
-            }
-            filter.categoryId = categoryId;
-        }
-
-        // 2. Busca os produtos com o filtro (se houver, Mongoose busca pelo ID)
-        // O Mongoose.find() é robusto e funcionará mesmo se filter for {} (listando tudo, caso a rota seja chamada sem filtro)
-        const products = await Product.find(filter)
-            .populate("categoryId", "name icon") 
-            .sort({ createdAt: -1 });
-
-        return res.status(200).json({
-            message: "Produtos listados com sucesso!",
-            data: products,
+    if (categoryId) {
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).json({
+          message: `ID de Categoria inválido: ${categoryId}.`,
+          data: [],
         });
-
-    } catch (err) {
-        // 💡 Tratamento de erro robusto para CastError ou falhas de populacão
-        if (err.name === 'CastError') {
-             console.error("❌ CastError ao buscar produtos:", err);
-             return res.status(400).json({ error: "ID de recurso inválido (CastError)." });
-        }
-        
-        console.error("❌ Erro ao listar produtos:", err);
-        return res.status(500).json({ error: "Erro interno ao buscar produto." });
+      }
+      filter.categoryId = categoryId;
     }
+
+    const products = await Product.find(filter)
+      .populate("categoryId", "name icon")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      message: "Produtos listados com sucesso!",
+      data: products,
+    });
+  } catch (err) {
+    if (err.name === "CastError") {
+      console.error("❌ CastError ao buscar produtos:", err);
+      return res
+        .status(400)
+        .json({ error: "ID de recurso inválido (CastError)." });
+    }
+
+    console.error("❌ Erro ao listar produtos:", err);
+    return res.status(500).json({ error: "Erro interno ao buscar produto." });
+  }
 };
 
 /**
@@ -166,7 +155,7 @@ const getProductById = async (req, res) => {
 };
 
 /**
- * Atualiza um produto existente
+ * Atualiza um produto
  */
 const updateProduct = async (req, res) => {
   try {
@@ -186,19 +175,19 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Produto não encontrado!" });
     }
 
-    // Remove imagem anterior, se houver e for substituída
     if (req.file && product.imagePublicId) {
       await cloudinary.uploader.destroy(product.imagePublicId);
     }
 
-    // Faz upload da nova imagem, se enviada
     if (req.file) {
       const uploadResult = await cloudinary.uploader.upload(req.file.path, {
         folder: "products",
         resource_type: "image",
       });
+
       product.image = uploadResult.secure_url;
       product.imagePublicId = uploadResult.public_id;
+
       fs.unlink(req.file.path, () => {});
     }
 
@@ -224,11 +213,12 @@ const updateProduct = async (req, res) => {
 };
 
 /**
- * Exclui um produto e remove sua imagem do Cloudinary
+ * Exclui um produto
  */
 const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
+
     if (!product) {
       return res.status(404).json({ message: "Produto não encontrado!" });
     }
@@ -247,59 +237,11 @@ const deleteProduct = async (req, res) => {
 };
 
 /**
- * Gera uma história infantil usando IA (Google Gemini)
+ * IA — Gera história infantil com Google GenAI
  */
 let lastCall = 0;
 
 const geminiCreateStory = async (req, res) => {
-    // 🚦 Rate Limiting: 3 segundos entre chamadas
-    if (Date.now() - lastCall < 3000) {
-        return res
-            .status(429)
-            .json({ message: "Espere 3 segundos antes de tentar novamente." });
-    }
-    lastCall = Date.now();
-
-    try {
-        const { word } = req.body;
-        if (!word?.trim()) {
-            return res.status(400).json({ message: "A palavra é obrigatória!" });
-        }
-
-        // 📝 Prompt otimizado para a palavra
-        const prompt = `
-            Crie uma pequena história com exatamente três frases inspirada na palavra "${word}".
-            A história deve ser envolvente, criativa e fácil de entender, adequada para crianças de 4 a 10 anos.
-            Mantenha o tom leve, mágico e positivo.
-        `;
-
-        // ⭐ MUDANÇA 1: Usando a sintaxe 'ai.models.generateContent'
-        // ⭐ MUDANÇA 2: Usando o modelo 'gemini-2.5-pro' para maior qualidade
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-pro", 
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        });
-
-        const text = response.text?.trim();
-
-        if (!text) {
-            throw new Error("Falha ao gerar história com Gemini. A resposta estava vazia.");
-        }
-
-        return res.status(200).json({
-            message: "História gerada com sucesso!",
-            story: text,
-        });
-    } catch (err) {
-        console.error("❌ Erro geminiCreateStory IA:", err);
-        return res.status(500).json({
-            error: "Erro ao gerar história com IA.",
-            details: err.message,
-        });
-    }
-};
-
-const geminiCreateStory_old = async (req, res) => {
   if (Date.now() - lastCall < 3000) {
     return res
       .status(429)
@@ -315,17 +257,17 @@ const geminiCreateStory_old = async (req, res) => {
 
     const prompt = `
       Crie uma pequena história com exatamente três frases inspirada na palavra "${word}".
-      A história deve ser envolvente, criativa e fácil de entender, adequada para crianças de 4 a 10 anos.
-      Mantenha o tom leve, mágico e positivo.
+      A história deve ser fácil para crianças de 4 a 10 anos, com tom leve, mágico e positivo.
     `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-pro",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
 
-    const result = await model.generateContent(prompt);
-    const text = result?.response?.text()?.trim();
-
+    const text = response.text?.trim();
     if (!text) {
-      throw new Error("Falha ao gerar história com Gemini.");
+      throw new Error("Resposta vazia da IA.");
     }
 
     return res.status(200).json({
@@ -333,7 +275,7 @@ const geminiCreateStory_old = async (req, res) => {
       story: text,
     });
   } catch (err) {
-    console.error("❌ Erro geminiCreateStory IA:", err);
+    console.error("❌ Erro ao gerar história com IA:", err);
     return res.status(500).json({
       error: "Erro ao gerar história com IA.",
       details: err.message,
