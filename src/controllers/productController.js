@@ -25,7 +25,17 @@ const createProduct = async (req, res) => {
       });
     }
 
-    const { title, english, sound, categoryId, syllable, isActive } = req.body;
+    const {
+      title,
+      english,
+      espanhol,
+      italiano,
+      frances,
+      sound,
+      categoryId,
+      syllable,
+      isActive,
+    } = req.body;
 
     if (!title?.trim()) {
       return res.status(400).json({ message: "O título é obrigatório!" });
@@ -54,6 +64,9 @@ const createProduct = async (req, res) => {
     const product = await Product.create({
       title: title.trim(),
       english: english.trim(),
+      espanhol: espanhol.trim(),
+      italiano: italiano.trim(),
+      frances: frances.trim(),
       image: imageUrl,
       imagePublicId,
       sound: sound?.trim() || "",
@@ -159,7 +172,7 @@ const getProductById = async (req, res) => {
  */
 const updateProduct = async (req, res) => {
   try {
-    const { title, english, sound, categoryId, syllable, isActive } = req.body;
+    const { title, english, espanhol, italiano, frances, sound, categoryId, syllable, isActive } = req.body;
 
     if (!title?.trim()) {
       return res.status(400).json({ message: "O título é obrigatório!" });
@@ -193,6 +206,9 @@ const updateProduct = async (req, res) => {
 
     product.title = title.trim();
     product.english = english.trim();
+    product.espanhol = espanhol.trim();
+    product.italiano = italiano.trim();
+    product.frances = frances.trim();
     product.sound = sound?.trim() || "";
     product.categoryId = categoryId || null;
     product.syllable = syllable?.trim() || "";

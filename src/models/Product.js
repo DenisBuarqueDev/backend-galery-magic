@@ -24,6 +24,33 @@ const ProductSchema = new mongoose.Schema(
       index: true,
     },
 
+    espanhol: {
+      type: String,
+      required: [true, "O título em espanhol é obrigatório."],
+      trim: true,
+      minlength: [2, "O título deve ter no mínimo 2 caracteres."],
+      maxlength: [100, "O título deve ter no máximo 100 caracteres."],
+      index: true,
+    },
+
+    italiano: {
+      type: String,
+      required: [true, "O título em italiano é obrigatório."],
+      trim: true,
+      minlength: [2, "O título deve ter no mínimo 2 caracteres."],
+      maxlength: [100, "O título deve ter no máximo 100 caracteres."],
+      index: true,
+    },
+
+    frances: {
+      type: String,
+      required: [true, "O título em francês é obrigatório."],
+      trim: true,
+      minlength: [2, "O título deve ter no mínimo 2 caracteres."],
+      maxlength: [100, "O título deve ter no máximo 100 caracteres."],
+      index: true,
+    },
+
     image: {
       type: String,
       required: [true, "A URL da imagem é obrigatória."],
