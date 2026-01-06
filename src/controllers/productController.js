@@ -266,18 +266,36 @@ const geminiCreateStory = async (req, res) => {
   lastCall = Date.now();
 
   try {
-    const { word } = req.body;
+    const { word, language = "pt" } = req.body;
+
     if (!word?.trim()) {
       return res.status(400).json({ message: "A palavra é obrigatória!" });
     }
 
+    // 🌍 Idiomas suportados
+    const LANGUAGE_INSTRUCTIONS = {
+      pt: "Escreva a história em português.",
+      en: "Write the story in English.",
+      es: "Escribe la historia en español.",
+      fr: "Écris l'histoire en français.",
+      it: "Scrivi la storia in italiano.",
+    };
+
+    const languageInstruction =
+      LANGUAGE_INSTRUCTIONS[language] ||
+      LANGUAGE_INSTRUCTIONS.pt;
+
+    // 🧠 Prompt final
     const prompt = `
+      ${languageInstruction}
+
       Crie uma pequena história com exatamente três frases inspirada na palavra "${word}".
-      A história deve ser fácil para crianças de 4 a 10 anos, com tom leve, mágico e positivo.
+      A história deve ser fácil para crianças de 4 a 10 anos,
+      com tom leve, mágico, educativo e positivo.
+      Use frases simples e linguagem adequada para crianças.
     `;
 
     const response = await ai.models.generateContent({
-      //model: "gemini-2.5-pro",
       model: "gemini-2.5-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
@@ -289,6 +307,7 @@ const geminiCreateStory = async (req, res) => {
 
     return res.status(200).json({
       message: "História gerada com sucesso!",
+      language,
       story: text,
     });
   } catch (err) {
@@ -299,6 +318,7 @@ const geminiCreateStory = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   createProduct,
