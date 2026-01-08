@@ -172,7 +172,17 @@ const getProductById = async (req, res) => {
  */
 const updateProduct = async (req, res) => {
   try {
-    const { title, english, espanhol, italiano, frances, sound, categoryId, syllable, isActive } = req.body;
+    const {
+      title,
+      english,
+      espanhol,
+      italiano,
+      frances,
+      sound,
+      categoryId,
+      syllable,
+      isActive,
+    } = req.body;
 
     if (!title?.trim()) {
       return res.status(400).json({ message: "O título é obrigatório!" });
@@ -258,23 +268,29 @@ const deleteProduct = async (req, res) => {
 let lastCall = 0;
 
 const geminiCreateStory = async (req, res) => {
+  // ⏱ Rate limit simples (3s)
   if (Date.now() - lastCall < 3000) {
-    return res
-      .status(429)
-      .json({ message: "Espere 3 segundos antes de tentar novamente." });
+    return res.status(429).json({
+      message: "Espere 3 segundos antes de tentar novamente.",
+    });
   }
   lastCall = Date.now();
 
   try {
-    const { word, language = "pt" } = req.body;
+    let { word, language } = req.body;
 
-    if (!word?.trim()) {
-      return res.status(400).json({ message: "A palavra é obrigatória!" });
+    if (!word || !word.trim()) {
+      return res.status(400).json({
+        message: "A palavra é obrigatória!",
+      });
     }
+
+    // 🌍 Normaliza idioma (en-US → en)
+    language = (language || "pt").split("-")[0];
 
     // 🌍 Idiomas suportados
     const LANGUAGE_INSTRUCTIONS = {
-      pt: "Escreva a história em português.",
+      pt: "Escreva a história em português brasileiro.",
       en: "Write the story in English.",
       es: "Escribe la historia en español.",
       fr: "Écris l'histoire en français.",
@@ -282,18 +298,26 @@ const geminiCreateStory = async (req, res) => {
     };
 
     const languageInstruction =
-      LANGUAGE_INSTRUCTIONS[language] ||
-      LANGUAGE_INSTRUCTIONS.pt;
+      LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.pt;
 
-    // 🧠 Prompt final
+    // 🧠 Prompt reforçado
     const prompt = `
-      ${languageInstruction}
+${languageInstruction}
 
-      Crie uma pequena história com exatamente três frases inspirada na palavra "${word}".
-      A história deve ser fácil para crianças de 4 a 10 anos,
-      com tom leve, mágico, educativo e positivo.
-      Use frases simples e linguagem adequada para crianças.
-    `;
+Crie uma história infantil com EXATAMENTE 3 FRASES.
+Cada frase deve terminar com ponto final.
+
+A história deve ser inspirada na palavra: "${word}"
+
+Regras:
+- Público: crianças de 4 a 10 anos
+- Tom: mágico, educativo, positivo e gentil
+- Linguagem simples e fácil de entender
+- Não use emojis
+- Não use títulos
+- Não use listas
+- Não ultrapasse três frases
+`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -301,6 +325,7 @@ const geminiCreateStory = async (req, res) => {
     });
 
     const text = response.text?.trim();
+
     if (!text) {
       throw new Error("Resposta vazia da IA.");
     }
@@ -318,7 +343,6 @@ const geminiCreateStory = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   createProduct,
