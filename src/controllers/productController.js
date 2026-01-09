@@ -336,10 +336,32 @@ Regras:
       story: text,
     });
   } catch (err) {
-    console.error("❌ Erro ao gerar história com IA:", err);
+    const statusCode = err?.response?.status || err?.status || 500;
+
+    const errorMessage =
+      err?.response?.data?.error?.message ||
+      err?.response?.data?.message ||
+      err?.message ||
+      "Erro desconhecido ao gerar história.";
+
+    console.error("❌ Erro detalhado Gemini:", {
+      statusCode,
+      errorMessage,
+      raw: err?.response?.data || err,
+    });
+
+    // 🚫 Limite de quota / créditos
+    if (statusCode === 429) {
+      return res.status(429).json({
+        error: "Limite de histórias atingido.",
+        details:
+          "Os créditos da IA acabaram ou o limite diário foi alcançado. Tente novamente mais tarde.",
+      });
+    }
+
     return res.status(500).json({
-      error: "Erro ao gerar história com IA.",
-      details: err.message,
+      error: "Erro interno ao gerar história.",
+      details: errorMessage,
     });
   }
 };
