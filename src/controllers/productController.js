@@ -113,8 +113,7 @@ const getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.query;
 
-    const filter = { isActive: true };
-    let sortOption = { createdAt: -1 }; // padrão DESC
+    const filter = {};
 
     if (categoryId) {
       if (!mongoose.Types.ObjectId.isValid(categoryId)) {
@@ -124,24 +123,18 @@ const getProductsByCategory = async (req, res) => {
         });
       }
 
-      const objectId = new mongoose.Types.ObjectId(categoryId);
-      filter.categoryId = objectId;
-
-      // 🔎 Busca categoria para verificar se é "numeros"
-      const category = await Category.findById(objectId);
-
-      if (category && category.name.toLowerCase() === "Numbers") {
-        // 🔥 Ordenar por título ASC (1,2,3...)
-        sortOption = { title: 1 };
-      }
+      filter.categoryId = new mongoose.Types.ObjectId(categoryId);
     }
 
     const products = await Product.find(filter)
       .populate("categoryId", "name icon")
-      .sort(sortOption);
+      .sort({ createdAt: 1 }); // 🔥 ORDEM DE CADASTRO ASC
+
+    console.log("TOTAL ENCONTRADO NO BACKEND:", products.length);
 
     return res.status(200).json({
       message: "Produtos listados com sucesso!",
+      total: products.length, // 👈 importante para debug
       data: products,
     });
   } catch (err) {
@@ -149,6 +142,7 @@ const getProductsByCategory = async (req, res) => {
     return res.status(500).json({ error: "Erro interno ao buscar produto." });
   }
 };
+
 
 /*const getProductsByCategory = async (req, res) => {
   try {
