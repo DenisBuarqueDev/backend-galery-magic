@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const Category = require("../models/Category"); // importe o model
 const mongoose = require("mongoose");
 const { GoogleGenAI } = require("@google/genai");
 const { validationResult } = require("express-validator");
@@ -107,7 +108,49 @@ const getProducts = async (req, res) => {
 /**
  * Lista produtos filtrados por categoria
  */
+
 const getProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.query;
+
+    const filter = { isActive: true };
+    let sortOption = { createdAt: -1 }; // padrão DESC
+
+    if (categoryId) {
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).json({
+          message: `ID de Categoria inválido: ${categoryId}.`,
+          data: [],
+        });
+      }
+
+      const objectId = new mongoose.Types.ObjectId(categoryId);
+      filter.categoryId = objectId;
+
+      // 🔎 Busca categoria para verificar se é "numeros"
+      const category = await Category.findById(objectId);
+
+      if (category && category.name.toLowerCase() === "Numbers") {
+        // 🔥 Ordenar por título ASC (1,2,3...)
+        sortOption = { title: 1 };
+      }
+    }
+
+    const products = await Product.find(filter)
+      .populate("categoryId", "name icon")
+      .sort(sortOption);
+
+    return res.status(200).json({
+      message: "Produtos listados com sucesso!",
+      data: products,
+    });
+  } catch (err) {
+    console.error("Erro ao listar produtos:", err);
+    return res.status(500).json({ error: "Erro interno ao buscar produto." });
+  }
+};
+
+/*const getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.query;
     const filter = {};
@@ -132,16 +175,16 @@ const getProductsByCategory = async (req, res) => {
     });
   } catch (err) {
     if (err.name === "CastError") {
-      console.error("❌ CastError ao buscar produtos:", err);
+      console.error("CastError ao buscar produtos:", err);
       return res
         .status(400)
         .json({ error: "ID de recurso inválido (CastError)." });
     }
 
-    console.error("❌ Erro ao listar produtos:", err);
+    console.error("Erro ao listar produtos:", err);
     return res.status(500).json({ error: "Erro interno ao buscar produto." });
   }
-};
+};*/
 
 /**
  * Retorna um produto pelo ID
