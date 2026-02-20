@@ -87,21 +87,26 @@ const createProduct = async (req, res) => {
 };
 
 /**
- * Lista todos os produtos aleatórios (até 300)
+ * Lista TODOS os produtos (ordenados por cadastro ASC)
  */
 const getProducts = async (req, res) => {
   try {
-    const products = await Product.aggregate([{ $sample: { size: 300 } }]);
+    const products = await Product.find({})
+      .populate("categoryId", "name icon")
+      .sort({ createdAt: 1 }); // ordem de cadastro ASC
 
-    await Product.populate(products, { path: "categoryId", select: "name" });
+    console.log("TOTAL GERAL NO BACKEND:", products.length);
 
     return res.status(200).json({
       message: "Produtos listados com sucesso!",
+      total: products.length,
       data: products,
     });
   } catch (err) {
     console.error("Erro ao listar produtos:", err);
-    return res.status(500).json({ error: "Erro interno ao listar produtos." });
+    return res.status(500).json({
+      error: "Erro interno ao listar produtos.",
+    });
   }
 };
 
