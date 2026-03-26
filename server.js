@@ -23,8 +23,8 @@ app.use(cookieParser());
 // 🌍 CORS (WEB + MOBILE)
 // =========================
 const allowedOrigins = [
-  "http://localhost:5173",
-  // "https://seu-frontend.com",
+  //"http://localhost:5173",
+  "https://frontend-galery-magic.vercel.app",
 ];
 
 const corsOptions = {
