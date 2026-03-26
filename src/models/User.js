@@ -42,12 +42,23 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isPremium: {
+      type: Boolean,
+      default: false,
+    },
+
+    subscription: {
+      productId: String,
+      purchaseToken: String,
+      expiryDate: Date,
+      autoRenewing: Boolean,
+    },
   },
   {
     timestamps: true,
     versionKey: false,
     collection: "users",
-  }
+  },
 );
 
 /**
