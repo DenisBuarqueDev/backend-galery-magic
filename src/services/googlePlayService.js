@@ -2,7 +2,7 @@ const { google } = require("googleapis");
 
 // 🔥 Autenticação com Google Play
 const auth = new google.auth.GoogleAuth({
-  keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY || "./config/google-service-account.json",
+  credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
   scopes: ["https://www.googleapis.com/auth/androidpublisher"],
 });
 

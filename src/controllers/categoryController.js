@@ -7,7 +7,7 @@ const Category = require("../models/Category");
 const createCategory = async (req, res) => {
     try {
         // ⬅️ AJUSTE: Incluímos 'icon' e removemos 'english' (não está no schema)
-        const { name, icon, description } = req.body; 
+        const { name, english, spanish, french, italian, icon, description } = req.body; 
 
         // 💡 Verificamos se já existe pelo nome
         const existing = await Category.findOne({ name: name.trim() });
@@ -15,7 +15,7 @@ const createCategory = async (req, res) => {
             return res.status(400).json({ message: "Essa categoria já existe." });
         }
 
-        const category = await Category.create({ name, icon, description });
+        const category = await Category.create({ name, english, spanish, french, italian, icon, description });
         res.status(201).json(category);
     } catch (error) {
         console.error("Erro ao criar categoria:", error);
@@ -64,11 +64,11 @@ const getCategoryById = async (req, res) => {
 const updateCategory = async (req, res) => {
     try {
         // ⬅️ AJUSTE: Incluímos 'icon' no destructuring
-        const { name, icon, description, isActive } = req.body; 
+        const { name, english, spanish, french, italian, icon, description, isActive } = req.body; 
 
         const category = await Category.findByIdAndUpdate(
             req.params.id,
-            { name, icon, description, isActive }, // ⬅️ Usamos os campos corrigidos
+            { name, english, spanish, french, italian, icon, description, isActive }, // ⬅️ Usamos os campos corrigidos
             { new: true, runValidators: true }
         );
 

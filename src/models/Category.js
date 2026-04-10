@@ -16,6 +16,46 @@ const CategorySchema = new mongoose.Schema(
             index: true,
         },
 
+        english: {
+            type: String,
+            required: [true, "O nome da categoria é obrigatório."],
+            trim: true,
+            minlength: [2, "O nome deve ter no mínimo 2 caracteres."],
+            maxlength: [50, "O nome deve ter no máximo 50 caracteres."],
+            unique: true,
+            index: true,
+        },
+
+        spanish: {
+            type: String,
+            required: [true, "O nome da categoria é obrigatório."],
+            trim: true,
+            minlength: [2, "O nome deve ter no mínimo 2 caracteres."],
+            maxlength: [50, "O nome deve ter no máximo 50 caracteres."],
+            unique: true,
+            index: true,
+        },
+
+        french: {
+            type: String,
+            required: [true, "O nome da categoria é obrigatório."],
+            trim: true,
+            minlength: [2, "O nome deve ter no mínimo 2 caracteres."],
+            maxlength: [50, "O nome deve ter no máximo 50 caracteres."],
+            unique: true,
+            index: true,
+        },
+
+        italian: {
+            type: String,
+            required: [true, "O nome da categoria é obrigatório."],
+            trim: true,
+            minlength: [2, "O nome deve ter no mínimo 2 caracteres."],
+            maxlength: [50, "O nome deve ter no máximo 50 caracteres."],
+            unique: true,
+            index: true,
+        },
+
         description: {
             type: String,
             trim: true,
