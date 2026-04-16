@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const Category = require("../models/Category"); // importe o model
+const { generateStoryService } = require("../services/storyService");
 const mongoose = require("mongoose");
 const { GoogleGenAI } = require("@google/genai");
 const { validationResult } = require("express-validator");
@@ -148,7 +149,6 @@ const getProductsByCategory = async (req, res) => {
   }
 };
 
-
 /*const getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.query;
@@ -192,7 +192,7 @@ const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate(
       "categoryId",
-      "name"
+      "name",
     );
 
     if (!product) {
@@ -307,7 +307,7 @@ const deleteProduct = async (req, res) => {
 /**
  * IA — Gera história infantil com Google GenAI
  */
-let lastCall = 0;
+/*let lastCall = 0;
 
 const geminiCreateStory = async (req, res) => {
   // ⏱ Rate limit simples (3s)
@@ -404,6 +404,65 @@ Regras:
     return res.status(500).json({
       error: "Erro interno ao gerar história.",
       details: errorMessage,
+    });
+  }
+};*/
+
+const geminiCreateStory = async (req, res) => {
+  try {
+    let { word, language } = req.body;
+
+    if (!word || !word.trim()) {
+      return res.status(400).json({
+        message: "A palavra é obrigatória!",
+      });
+    }
+
+    language = (language || "pt").split("-")[0];
+
+    const LANGUAGE_INSTRUCTIONS = {
+      pt: "Escreva a história em português brasileiro.",
+      en: "Write the story in English.",
+      es: "Escribe la historia en español.",
+      fr: "Écris l'histoire en français.",
+      it: "Scrivi la storia in italiano.",
+    };
+
+    const languageInstruction =
+      LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.pt;
+
+    const prompt = `
+${languageInstruction}
+
+Crie uma história infantil com EXATAMENTE 4 FRASES.
+Cada frase deve terminar com ponto final.
+
+A história deve ser inspirada na palavra: "${word}"
+
+Regras:
+- Público: crianças de 4 a 10 anos
+- Tom: mágico, educativo, positivo e gentil
+- Linguagem simples e fácil de entender
+- Não use emojis
+- Não use títulos
+- Não use listas
+- Não ultrapasse quatro frases
+`;
+
+    const result = await generateStoryService(ai, prompt, word, language);
+
+    return res.status(200).json({
+      message: result.success
+        ? "História gerada com sucesso!"
+        : "História gerada com fallback",
+      language,
+      story: result.story,
+    });
+  } catch (err) {
+    console.error("❌ ERRO FINAL:", err);
+
+    return res.status(500).json({
+      error: "Erro interno ao gerar história.",
     });
   }
 };
