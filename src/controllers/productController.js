@@ -434,7 +434,7 @@ const geminiCreateStory = async (req, res) => {
     const prompt = `
 ${languageInstruction}
 
-Crie uma história infantil com EXATAMENTE 4 FRASES.
+Crie uma história infantil com EXATAMENTE 3 FRASES.
 Cada frase deve terminar com ponto final.
 
 A história deve ser inspirada na palavra: "${word}"
