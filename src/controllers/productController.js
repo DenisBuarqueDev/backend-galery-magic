@@ -6,6 +6,7 @@ const { GoogleGenAI } = require("@google/genai");
 const { validationResult } = require("express-validator");
 const fs = require("fs");
 const { v2: cloudinary } = require("cloudinary");
+const { generateStoryMultiAI } = require("../services/multiAIService");
 
 // 🔥 Nova API do Google GenAI (APENAS ELA)
 const ai = new GoogleGenAI({
@@ -408,6 +409,7 @@ Regras:
   }
 };*/
 
+/*
 const geminiCreateStory = async (req, res) => {
   try {
     let { word, language } = req.body;
@@ -457,6 +459,66 @@ Regras:
         : "História gerada com fallback",
       language,
       story: result.story,
+    });
+  } catch (err) {
+    console.error("❌ ERRO FINAL:", err);
+
+    return res.status(500).json({
+      error: "Erro interno ao gerar história.",
+    });
+  }
+};*/
+
+const geminiCreateStory = async (req, res) => {
+  try {
+    let { word, language } = req.body;
+
+    if (!word || !word.trim()) {
+      return res.status(400).json({
+        message: "A palavra é obrigatória!",
+      });
+    }
+
+    language = (language || "pt").split("-")[0];
+
+    const LANGUAGE_INSTRUCTIONS = {
+      pt: "Escreva a história em português brasileiro.",
+      en: "Write the story in English.",
+      es: "Escribe la historia en español.",
+      fr: "Écris l'histoire en français.",
+      it: "Scrivi la storia in italiano.",
+    };
+
+    const languageInstruction =
+      LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.pt;
+
+    const prompt = `
+${languageInstruction}
+
+Crie uma história com um tom mágico, educativo, simples e infantil com EXATAMENTE 3 FRASES.
+Cada frase deve terminar com ponto final.
+
+A história deve ser inspirada na palavra: "${word}"
+
+Regras:
+- Público: crianças de 4 a 10 anos
+- Tom: mágico, educativo, positivo e gentil
+- Linguagem simples e fácil de entender
+- Não use emojis
+- Não use títulos
+- Não use listas
+- Não ultrapasse quatro frases
+`;
+
+    const result = await generateStoryMultiAI(ai, prompt, word, language);
+
+    console.log("🤖 IA usada:", result.source);
+
+    return res.status(200).json({
+      message: "História gerada com sucesso!",
+      language,
+      story: result.story,
+      source: result.source, // 🔥 útil pra debug
     });
   } catch (err) {
     console.error("❌ ERRO FINAL:", err);
