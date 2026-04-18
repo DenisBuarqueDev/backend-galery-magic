@@ -103,6 +103,12 @@ const ProductSchema = new mongoose.Schema(
       default: true,
     },
 
+    genero: {
+      type: String,
+      trim: true,
+      default: "m",
+    },
+
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
