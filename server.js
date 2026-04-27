@@ -69,16 +69,17 @@ app.get("/api/me", authMiddleware, async (req, res) => {
   try {
     const User = require("./src/models/User");
 
-    const user = await User.findById(req.user.id).select(
-      "isPremium premiumExpiresAt"
-    );
+    const user = await User.findById(req.user.id);
+
+    const isPremium =
+      user?.subscription?.expiryDate &&
+      new Date(user.subscription.expiryDate) > new Date();
 
     res.json({
-      isPremium: user?.isPremium || false,
-      premiumExpiresAt: user?.premiumExpiresAt || null,
+      isPremium,
+      premiumExpiresAt: user?.subscription?.expiryDate || null,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: "Erro ao buscar usuário" });
   }
 });

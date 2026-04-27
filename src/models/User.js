@@ -49,9 +49,11 @@ const UserSchema = new mongoose.Schema(
 
     subscription: {
       productId: String,
-      purchaseToken: String,
+      purchaseToken: { type: String, index: true },
       expiryDate: Date,
       autoRenewing: Boolean,
+      paymentState: Number,
+      lastChecked: Date,
     },
   },
   {

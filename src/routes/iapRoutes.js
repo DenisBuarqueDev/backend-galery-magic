@@ -6,8 +6,9 @@ const authMiddleware = require("../middlewares/auth");
 const User = require("../models/User");
 
 // 🔥 VALIDAR COMPRA (ASSINATURA)
+
 router.post("/validate", authMiddleware, async (req, res) => {
-  const { purchaseToken } = req.body;
+  const { purchaseToken, productId } = req.body;
   const userId = req.user.id;
 
   if (!purchaseToken) {
@@ -18,46 +19,65 @@ router.post("/validate", authMiddleware, async (req, res) => {
   }
 
   try {
+    // 🔥 =========================
+    // 🧪 MOCK MODE
+    // 🔥 =========================
+    if (process.env.IAP_MOCK_MODE === "true") {
+      console.log("🧪 MOCK ATIVO");
+
+      const fakeExpiry = new Date();
+      fakeExpiry.setDate(fakeExpiry.getDate() + 30); // +30 dias
+
+      await User.findByIdAndUpdate(userId, {
+        isPremium: true,
+        subscription: {
+          productId: productId || "premium_monthly",
+          purchaseToken,
+          expiryDate: fakeExpiry,
+          autoRenewing: true,
+          paymentState: 1,
+          lastChecked: new Date(),
+        },
+      });
+
+      return res.json({
+        valid: true,
+        expiresAt: fakeExpiry,
+        mock: true,
+      });
+    }
+
+    // 🔥 =========================
+    // 🚀 PRODUÇÃO (GOOGLE)
+    // 🔥 =========================
     const result = await validateSubscription({
       packageName: "com.denisbuarque.HistoriasMagicasIA",
-      subscriptionId: "premium_monthly",
+      subscriptionId: productId,
       purchaseToken,
     });
 
-    // 🔥 VALIDAÇÃO REAL
-    const isPaymentValid = result.paymentState === 1;
-    const isNotExpired =
-      Date.now() < Number(result.expiryTimeMillis);
+    const isPaid = result.paymentState === 1;
+    const isNotExpired = Date.now() < Number(result.expiryTimeMillis);
 
-    const isValid = isPaymentValid && isNotExpired;
+    const isValid = isPaid && isNotExpired;
 
     if (!isValid) {
       return res.status(400).json({
         valid: false,
-        message: "Assinatura inválida ou expirada",
+        message: "Assinatura inválida",
       });
     }
 
-    // 🔒 ANTI-FRAUDE (token único)
-    const existingUser = await User.findOne({ purchaseToken });
-
-    if (
-      existingUser &&
-      existingUser._id.toString() !== userId
-    ) {
-      return res.status(400).json({
-        valid: false,
-        message: "Token já está sendo usado por outro usuário",
-      });
-    }
-
-    // 🔥 ATUALIZA USUÁRIO
     await User.findByIdAndUpdate(userId, {
       isPremium: true,
-      purchaseToken,
-      premiumExpiresAt: new Date(
-        Number(result.expiryTimeMillis)
-      ),
+      subscription: {
+        productId,
+        purchaseToken,
+        expiryDate: new Date(Number(result.expiryTimeMillis)),
+        autoRenewing: result.autoRenewing,
+        paymentState: result.paymentState,
+        lastChecked: new Date(),
+      },
     });
 
     return res.json({
@@ -65,7 +85,7 @@ router.post("/validate", authMiddleware, async (req, res) => {
       expiresAt: result.expiryTimeMillis,
     });
   } catch (error) {
-    console.error("Erro validate purchase:", error);
+    console.error("Erro validate:", error);
 
     return res.status(500).json({
       valid: false,
@@ -73,5 +93,75 @@ router.post("/validate", authMiddleware, async (req, res) => {
     });
   }
 });
+
+/*router.post("/validate", authMiddleware, async (req, res) => {
+  const { purchaseToken, productId } = req.body;
+  const userId = req.user.id;
+
+  if (!purchaseToken || !productId) {
+    return res.status(400).json({
+      valid: false,
+      message: "Dados obrigatórios faltando",
+    });
+  }
+
+  try {
+    const result = await validateSubscription({
+      packageName: "com.denisbuarque.HistoriasMagicasIA",
+      subscriptionId: productId,
+      purchaseToken,
+    });
+
+    const isPaid = result.paymentState === 1;
+    const isNotExpired = Date.now() < Number(result.expiryTimeMillis);
+    const isCanceled = result.cancelReason !== undefined;
+
+    const isValid = isPaid && isNotExpired && !isCanceled;
+
+    if (!isValid) {
+      return res.status(400).json({
+        valid: false,
+        message: "Assinatura inválida",
+      });
+    }
+
+    // 🔒 Anti-fraude correto
+    const existingUser = await User.findOne({
+      "subscription.purchaseToken": purchaseToken,
+    });
+
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return res.status(400).json({
+        valid: false,
+        message: "Token já usado",
+      });
+    }
+
+    // 🔥 Atualização correta
+    await User.findByIdAndUpdate(userId, {
+      isPremium: true,
+      subscription: {
+        productId,
+        purchaseToken,
+        expiryDate: new Date(Number(result.expiryTimeMillis)),
+        autoRenewing: result.autoRenewing,
+        paymentState: result.paymentState,
+        lastChecked: new Date(),
+      },
+    });
+
+    return res.json({
+      valid: true,
+      expiresAt: result.expiryTimeMillis,
+    });
+  } catch (error) {
+    console.error("Erro validate:", error);
+
+    return res.status(500).json({
+      valid: false,
+      message: "Erro ao validar assinatura",
+    });
+  }
+});*/
 
 module.exports = router;
