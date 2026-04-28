@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { validateSubscription } = require("../services/googlePlayService");
-const authMiddleware = require("../middlewares/auth");
+const authMiddleware = require("../middlewares/authMiddleware");
 const User = require("../models/User");
 
 const isMock = process.env.IAP_MOCK_MODE === "true";
