@@ -7,8 +7,17 @@ const User = require("../models/User");
 
 // 🔥 VALIDAR COMPRA (ASSINATURA)
 
-router.post("/validate", authMiddleware, async (req, res) => {
-  const { purchaseToken, productId } = req.body;
+const isMock = process.env.IAP_MOCK_MODE === "true";
+
+router.post("/validate", isMock ? async (req, res) => {
+  // 🔥 MOCK DIRETO (SEM AUTH)
+  return res.json({
+    valid: true,
+    expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+  });
+} : [authMiddleware, async (req, res) => {
+  // 🔥 PRODUÇÃO (COM AUTH)
+  const { purchaseToken } = req.body;
   const userId = req.user.id;
 
   if (!purchaseToken) {
@@ -19,80 +28,42 @@ router.post("/validate", authMiddleware, async (req, res) => {
   }
 
   try {
-    // 🔥 =========================
-    // 🧪 MOCK MODE
-    // 🔥 =========================
-    if (process.env.IAP_MOCK_MODE === "true") {
-      console.log("🧪 MOCK ATIVO");
-
-      const fakeExpiry = new Date();
-      fakeExpiry.setDate(fakeExpiry.getDate() + 30); // +30 dias
-
-      await User.findByIdAndUpdate(userId, {
-        isPremium: true,
-        subscription: {
-          productId: productId || "premium_monthly",
-          purchaseToken,
-          expiryDate: fakeExpiry,
-          autoRenewing: true,
-          paymentState: 1,
-          lastChecked: new Date(),
-        },
-      });
-
-      return res.json({
-        valid: true,
-        expiresAt: fakeExpiry,
-        mock: true,
-      });
-    }
-
-    // 🔥 =========================
-    // 🚀 PRODUÇÃO (GOOGLE)
-    // 🔥 =========================
     const result = await validateSubscription({
       packageName: "com.denisbuarque.HistoriasMagicasIA",
-      subscriptionId: productId,
+      subscriptionId: "premium_monthly",
       purchaseToken,
     });
 
-    const isPaid = result.paymentState === 1;
+    const isPaymentValid = result.paymentState === 1;
     const isNotExpired = Date.now() < Number(result.expiryTimeMillis);
 
-    const isValid = isPaid && isNotExpired;
+    const isValid = isPaymentValid && isNotExpired;
 
     if (!isValid) {
       return res.status(400).json({
         valid: false,
-        message: "Assinatura inválida",
+        message: "Assinatura inválida ou expirada",
       });
     }
 
     await User.findByIdAndUpdate(userId, {
       isPremium: true,
-      subscription: {
-        productId,
-        purchaseToken,
-        expiryDate: new Date(Number(result.expiryTimeMillis)),
-        autoRenewing: result.autoRenewing,
-        paymentState: result.paymentState,
-        lastChecked: new Date(),
-      },
+      purchaseToken,
+      premiumExpiresAt: new Date(Number(result.expiryTimeMillis)),
     });
 
     return res.json({
       valid: true,
       expiresAt: result.expiryTimeMillis,
     });
-  } catch (error) {
-    console.error("Erro validate:", error);
 
+  } catch (error) {
     return res.status(500).json({
       valid: false,
       message: "Erro ao validar assinatura",
     });
   }
-});
+}]);
 
 /*router.post("/validate", authMiddleware, async (req, res) => {
   const { purchaseToken, productId } = req.body;
