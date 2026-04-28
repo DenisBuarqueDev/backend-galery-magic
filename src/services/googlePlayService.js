@@ -1,4 +1,55 @@
-const { google } = require("googleapis");
+const isMock = process.env.IAP_MOCK_MODE === "true";
+
+let androidpublisher = null;
+
+if (!isMock) {
+  const { google } = require("googleapis");
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
+    scopes: ["https://www.googleapis.com/auth/androidpublisher"],
+  });
+
+  androidpublisher = google.androidpublisher({
+    version: "v3",
+    auth,
+  });
+}
+
+// 🔥 VALIDAR ASSINATURA
+async function validateSubscription({
+  packageName,
+  subscriptionId,
+  purchaseToken,
+}) {
+  if (isMock) {
+    return {
+      paymentState: 1,
+      expiryTimeMillis: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    };
+  }
+
+  if (!packageName || !subscriptionId || !purchaseToken) {
+    throw new Error("Dados inválidos para validação");
+  }
+
+  try {
+    const res = await androidpublisher.purchases.subscriptions.get({
+      packageName,
+      subscriptionId,
+      token: purchaseToken,
+    });
+
+    return res.data;
+  } catch (error) {
+    console.error("Erro Google API:", error?.response?.data || error.message);
+    throw new Error("Erro ao validar assinatura no Google");
+  }
+}
+
+module.exports = { validateSubscription };
+
+/*const { google } = require("googleapis");
 
 // 🔥 Autenticação com Google Play
 const auth = new google.auth.GoogleAuth({
@@ -55,4 +106,4 @@ async function validateSubscription({
   }
 }
 
-module.exports = { validateSubscription };
+module.exports = { validateSubscription };  */

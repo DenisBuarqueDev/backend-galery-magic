@@ -27,6 +27,7 @@ if (isMock) {
    * 🔐 PRODUÇÃO (COM AUTH)
    * =========================
    */
+
   router.post("/validate", authMiddleware, async (req, res) => {
     const { purchaseToken } = req.body;
     const userId = req.user.id;
